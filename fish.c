@@ -4,6 +4,7 @@
 #define DOWN 1
 #define LEFT 2
 #define RIGHT 3
+#define SLEEP_CYCLE 5000000
 
 #include <ncurses.h>
 #include <stdlib.h>
@@ -131,10 +132,10 @@ void nextPosition(fish* pf, char map[WIDTH][LENGTH])
 	pf->x = pf->px;
 	pf->y = pf->py;
 	pf->direction = pf->pDirection;
-	nextPosition(pf, map);
     }
+    else
+	pf->lifecycles++;
 
-    pf->lifecycles++;
 }
 
 
@@ -173,7 +174,7 @@ int main()
 	printFish(&pf);
 
 	if (pf.happiness)
-	    usleep(5000000/pf.happiness);
+	    usleep(SLEEP_CYCLE/pf.happiness);
 	else
 	    death(&pf, map);
 
