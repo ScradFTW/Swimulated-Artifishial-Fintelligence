@@ -1,0 +1,9 @@
+Things need to be done:
+
+[x] have a fish that swims randomly in a grid
+[ ] feed fish by pressing f
+[ ] have the fish search food during feeding
+[ ] decrement happiness over lifetime, increment when fed
+[ ] include a death function for when the fish is left unhappy for too long
+[ ] include a function to add new maps
+[ ] add comments... 
