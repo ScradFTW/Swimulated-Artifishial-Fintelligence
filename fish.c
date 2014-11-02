@@ -1,5 +1,5 @@
-#define WIDTH 100
-#define LENGTH 100
+#define WIDTH 30
+#define LENGTH 30
 #define UP 0
 #define DOWN 1
 #define LEFT 2
@@ -9,18 +9,9 @@
 #include <ncurses.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
 
-int oppositeDirection(int x_dir, int y_dir, int pDir)
-{
-    
-    if ((x_dir == 1 && pDir == LEFT)
-	|| (x_dir == -1 && pDir == RIGHT)
-	|| (y_dir == 1 && pDir == UP)
-	|| (y_dir == -1 && pDir == DOWN))
-	return 1;
-
-    return 0;
-}
+char map[WIDTH][LENGTH];
 
 typedef struct fish_props
 {
@@ -32,8 +23,29 @@ typedef struct fish_props
     int pDirection;
     int happiness;
     int hunger;
-    int lifecycles;
+    unsigned long long lifecycles;
 } fish;
+
+void initMap()
+{
+    for (int x = 0; x < WIDTH; x++)
+	for (int y = 0; y < LENGTH; y++)
+	    if (y == 0 || y == LENGTH - 1 || x == WIDTH - 1)
+		map[x][y] = '+';
+	    else
+		map[x][y] = ' ';
+
+}
+
+int nearBounds(int x, int y)
+{
+    for (int n = 0; n <= 1; n++)
+	for (int i = 0; i <= 1; i++)
+	    if (map[x+n][y+i] != ' ')
+		return 0;
+	
+    return 1;
+}
 
 void printFish(fish* pf)
 {
@@ -83,7 +95,7 @@ void printFish(fish* pf)
     move(0, 0);
 }
 
-void printMap(char map[WIDTH][LENGTH])
+void printMap()
 {    
     for (int x = 0; x < WIDTH; x++)
     {
@@ -95,56 +107,58 @@ void printMap(char map[WIDTH][LENGTH])
     
 }
 
-void nextPosition(fish* pf, char map[WIDTH][LENGTH])
+void nextPosition(fish* pf)
 {
-    int x_dir;
-    int y_dir;
+    int x = pf->x;
+    int y = pf->y;
+    int x_dir = 0;
+    int y_dir = 0;
+    srand(time(NULL));
+	
+    x_dir = (rand() % 3) - 1;
+    y_dir = (rand() % 3) - 1;
 
-    for (;;)
-    {	
-	x_dir = (random() % 3) - 1;
-	y_dir = (random() % 3) - 1;
+    x += x_dir;
+    y += y_dir;
 
-	if (!oppositeDirection(x_dir, y_dir, pf->direction))
-	    break;
+    if (x == WIDTH - 2 || y == LENGTH - 2 
+	|| x == 1 || y == 0)
+    {
+	x_dir *= -2;
+	y_dir *= -2;
+	x += x_dir;
+	y += y_dir;
     }
 
+    if (map[x][y] != ' ')
+	exit(1);
+    
     pf->px = pf->x;
     pf->py = pf->y;
     pf->pDirection = pf->direction;
 
-    pf->x += x_dir;
-    pf->y += y_dir;
-    
+    pf->x = x;
+    pf->y = y;
     if (x_dir == 1)
 	pf->direction = RIGHT;
     else if (x_dir == -1)
 	pf->direction = LEFT;
 
-    if (y_dir == 1)
+    else if (y_dir == 1)
 	pf->direction = DOWN;
     else if (y_dir == -1)
 	pf->direction = UP;
-	
 
-    if (map[pf->x][pf->y] != ' ')
-    {
-	pf->x = pf->px;
-	pf->y = pf->py;
-	pf->direction = pf->pDirection;
-    }
-    else
-	pf->lifecycles++;
-
-}
+    pf->lifecycles++;
+}	
 
 
-void death(fish* pf, char map[WIDTH][LENGTH])
+void death(fish* pf)
 {
     pf->direction = DOWN;
 
     while (map[pf->x][pf->y--] == ' ')
-     	printFish(pf);
+	printFish(pf);
 
 }
 
@@ -154,6 +168,7 @@ int main()
     initscr();
     raw();
     
+    char ch;
     fish pf;
     pf.x = 10;
     pf.y = 10;
@@ -162,21 +177,21 @@ int main()
     pf.lifecycles = 0;
     pf.hunger = 0;
 
-    char map[WIDTH][LENGTH] = { 
-#include "initMap.txt" 
-    }; 
+    initMap();
     
     printMap(map);
     
     for (;;) 
     {
-	nextPosition(&pf, map);
+	nextPosition(&pf);
 	printFish(&pf);
 
+	//if f is pressed, drop food
+       
 	if (pf.happiness)
 	    usleep(SLEEP_CYCLE/pf.happiness);
 	else
-	    death(&pf, map);
+	    death(&pf);
 
 	refresh();
     }
