@@ -218,7 +218,8 @@ int main()
         ch = getch();
         if (ch == 'f' && df == FALSE)
         {
-            fx = 5;
+	    srand(time(NULL));
+            fx = (rand() % 28) + 2;
             fy = 0;
             df = TRUE;
         }
@@ -240,8 +241,6 @@ int main()
 
         refresh();
     }
-
-
 
     getch();
     endwin();
