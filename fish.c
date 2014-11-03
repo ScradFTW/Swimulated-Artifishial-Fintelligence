@@ -4,7 +4,7 @@
 #define DOWN 1
 #define LEFT 2
 #define RIGHT 3
-#define SLEEP_CYCLE 5000000
+#define SLEEP_CYCLE 3500000
 #define TRUE 1
 #define FALSE 0
 
@@ -97,9 +97,6 @@ void printFish(fish* pf)
     move(1, 32);
     printw("Life cycles:  %d", pf->lifecycles);
 
-    move(2, 32);
-    printw("Hunger:       %d", pf->hunger);
-    
     mvaddch(32, 0, ' ');
 }
 
@@ -160,6 +157,13 @@ void nextPosition(fish* pf)
     pf->lifecycles++;
 }
 
+/* int findFood(int fx, int fy, fish* pf) */
+/* { */
+   
+    
+
+/* } */
+
 int dropFood(int fx, int fy, fish* pf)
 {
 
@@ -168,7 +172,7 @@ int dropFood(int fx, int fy, fish* pf)
     if (fx == pf->x && fy == pf->y)
         return FALSE;
     else
-        mvaddch(fy, fx, 'f');
+        mvaddch(fy, fx, '*');
 
     if (fy != LENGTH - 2)
         return TRUE;
@@ -219,7 +223,7 @@ int main()
         if (ch == 'f' && df == FALSE)
         {
 	    srand(time(NULL));
-            fx = (rand() % 28) + 2;
+            fx = (rand() % WIDTH - 2) + 2;
             fy = 0;
             df = TRUE;
         }
