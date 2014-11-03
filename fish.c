@@ -31,45 +31,45 @@ typedef struct fish_props
 void initMap()
 {
     for (int x = 0; x < WIDTH; x++)
-	for (int y = 0; y < LENGTH; y++)
-	    if (y == 0 || y == LENGTH - 1 || x == WIDTH - 1)
-		map[x][y] = '+';
-	    else
-		map[x][y] = ' ';
+        for (int y = 0; y < LENGTH; y++)
+            if (y == 0 || y == LENGTH - 1 || x == WIDTH - 1)
+                map[x][y] = '+';
+            else
+                map[x][y] = ' ';
 
 }
 
 int nearBounds(int x, int y)
 {
     for (int n = 0; n <= 1; n++)
-	for (int i = 0; i <= 1; i++)
-	    if (map[x+n][y+i] != ' ')
-		return 0;
-	
+        for (int i = 0; i <= 1; i++)
+            if (map[x+n][y+i] != ' ')
+                return 0;
+
     return 1;
 }
 
 void printFish(fish* pf)
 {
     mvaddch(pf->py, pf->px, ' ');
-    
+
     switch (pf->pDirection)
     {
     case UP:
-	mvaddch(pf->py + 1, pf->px, ' ');
-	break;
+        mvaddch(pf->py + 1, pf->px, ' ');
+        break;
 
     case DOWN:
-	mvaddch(pf->py - 1, pf->px, ' ');
-	break;
+        mvaddch(pf->py - 1, pf->px, ' ');
+        break;
 
     case LEFT:
-	mvaddch(pf->py, pf->px + 1, ' ');
-	break;
+        mvaddch(pf->py, pf->px + 1, ' ');
+        break;
 
     case RIGHT:
-	mvaddch(pf->py, pf->px - 1, ' ');
-	break;
+        mvaddch(pf->py, pf->px - 1, ' ');
+        break;
     }
 
     mvaddch(pf->y, pf->x, 'o');
@@ -78,40 +78,41 @@ void printFish(fish* pf)
     switch(pf->direction)
     {
     case UP:
-	mvaddch(pf->y + 1, pf->x, '^');
-	break;
+        mvaddch(pf->y + 1, pf->x, '^');
+        break;
 
     case DOWN:
-	mvaddch(pf->y - 1, pf->x, 'v');
-	break;
+        mvaddch(pf->y - 1, pf->x, 'v');
+        break;
 
     case LEFT:
-	mvaddch(pf->y, pf->x + 1, '<');
-	break;
+        mvaddch(pf->y, pf->x + 1, '<');
+        break;
 
     case RIGHT:
-	mvaddch(pf->y, pf->x - 1, '>');
-	break;
+        mvaddch(pf->y, pf->x - 1, '>');
+        break;
     }
-    
+
     move(1, 32);
     printw("Life cycles:  %d", pf->lifecycles);
-    
+
     move(2, 32);
     printw("Hunger:       %d", pf->hunger);
-
+    
+    mvaddch(32, 0, ' ');
 }
 
 void printMap()
-{    
+{
     for (int x = 0; x < WIDTH; x++)
     {
-	for (int y = 0; y < LENGTH; y++)
-	    printw("%c", map[x][y]);
+        for (int y = 0; y < LENGTH; y++)
+            printw("%c", map[x][y]);
 
-	printw("\n");
+        printw("\n");
     }
-    
+
 }
 
 void nextPosition(fish* pf)
@@ -121,25 +122,25 @@ void nextPosition(fish* pf)
     int x_dir = 0;
     int y_dir = 0;
     srand(time(NULL));
-	
+
     x_dir = (rand() % 3) - 1;
     y_dir = (rand() % 3) - 1;
 
     x += x_dir;
     y += y_dir;
 
-    if (x == WIDTH - 2 || y == LENGTH - 2 
-	|| x == 1 || y == 0)
+    if (x == WIDTH - 2 || y == LENGTH - 2
+            || x == 1 || y == 0)
     {
-	x_dir *= -2;
-	y_dir *= -2;
-	x += x_dir;
-	y += y_dir;
+        x_dir *= -2;
+        y_dir *= -2;
+        x += x_dir;
+        y += y_dir;
     }
 
     if (map[x][y] != ' ')
-	exit(1);
-    
+        exit(1);
+
     pf->px = pf->x;
     pf->py = pf->y;
     pf->pDirection = pf->direction;
@@ -147,27 +148,30 @@ void nextPosition(fish* pf)
     pf->x = x;
     pf->y = y;
     if (x_dir == 1)
-	pf->direction = RIGHT;
+        pf->direction = RIGHT;
     else if (x_dir == -1)
-	pf->direction = LEFT;
+        pf->direction = LEFT;
 
     else if (y_dir == 1)
-	pf->direction = DOWN;
+        pf->direction = DOWN;
     else if (y_dir == -1)
-	pf->direction = UP;
+        pf->direction = UP;
 
     pf->lifecycles++;
-}	
+}
 
-int dropFood(int fx, int fy)
+int dropFood(int fx, int fy, fish* pf)
 {
 
     mvaddch(fy-1, fx, ' ');
-    
-    mvaddch(fy, fx, 'f');
+
+    if (fx == pf->x && fy == pf->y)
+        return FALSE;
+    else
+        mvaddch(fy, fx, 'f');
 
     if (fy != LENGTH - 2)
-	return TRUE;
+        return TRUE;
 
     return FALSE;
 }
@@ -177,13 +181,13 @@ void death(fish* pf)
     pf->direction = DOWN;
 
     while (map[pf->x][pf->y--] == ' ')
-	printFish(pf);
+        printFish(pf);
 
 }
 
 
 int main()
-{    
+{
     initscr();
     raw();
     cbreak();
@@ -204,42 +208,40 @@ int main()
 
     initMap();
     printMap(map);
-    
 
-    for (;;) 
+
+    for (;;)
     {
-	nextPosition(&pf);
+        nextPosition(&pf);
 
-	//drop food when f is pressed
-	ch = getch();
-	if (ch == 'f')
-	{
-	    fx = 5;
-	    fy = 0;
-	    df = TRUE;
-	}
-	else if (ch == 'q')
-	{
-	    nocbreak();
-	    return EXIT_SUCCESS;
-	}
-	    
+        //drop food when f is pressed
+        ch = getch();
+        if (ch == 'f' && df == FALSE)
+        {
+            fx = 5;
+            fy = 0;
+            df = TRUE;
+        }
+        else if (ch == 'q')
+        {
+            nocbreak();
+            return EXIT_SUCCESS;
+        }
 
-	if (df)
-	    df = dropFood(fx, fy++);
+        if (df)
+            df = dropFood(fx, fy++, &pf);
 
-	printFish(&pf);
+        printFish(&pf);
 
+        if (pf.happiness)
+            usleep(SLEEP_CYCLE/pf.happiness);
+        else
+            death(&pf);
 
-	if (pf.happiness)
-	    usleep(SLEEP_CYCLE/pf.happiness);
-	else
-	    death(&pf);
-
-	refresh();
+        refresh();
     }
-    
-    
+
+
 
     getch();
     endwin();
