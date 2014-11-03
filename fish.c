@@ -5,6 +5,8 @@
 #define LEFT 2
 #define RIGHT 3
 #define SLEEP_CYCLE 5000000
+#define TRUE 1
+#define FALSE 0
 
 #include <ncurses.h>
 #include <stdlib.h>
@@ -92,7 +94,12 @@ void printFish(fish* pf)
 	break;
     }
     
-    move(0, 0);
+    move(1, 32);
+    printw("Life cycles:  %d", pf->lifecycles);
+    
+    move(2, 32);
+    printw("Hunger:       %d", pf->hunger);
+
 }
 
 void printMap()
@@ -152,6 +159,18 @@ void nextPosition(fish* pf)
     pf->lifecycles++;
 }	
 
+int dropFood(int fx, int fy)
+{
+
+    mvaddch(fy-1, fx, ' ');
+    
+    mvaddch(fy, fx, 'f');
+
+    if (fy != LENGTH - 2)
+	return TRUE;
+
+    return FALSE;
+}
 
 void death(fish* pf)
 {
@@ -167,9 +186,15 @@ int main()
 {    
     initscr();
     raw();
-    
+    cbreak();
+    timeout(1);
+
     char ch;
+    int fx = 0;
+    int fy = 0;
+    int df = FALSE;
     fish pf;
+
     pf.x = 10;
     pf.y = 10;
     pf.happiness = 8;
@@ -178,16 +203,34 @@ int main()
     pf.hunger = 0;
 
     initMap();
-    
     printMap(map);
     
+
     for (;;) 
     {
 	nextPosition(&pf);
+
+	//drop food when f is pressed
+	ch = getch();
+	if (ch == 'f')
+	{
+	    fx = 5;
+	    fy = 0;
+	    df = TRUE;
+	}
+	else if (ch == 'q')
+	{
+	    nocbreak();
+	    return EXIT_SUCCESS;
+	}
+	    
+
+	if (df)
+	    df = dropFood(fx, fy++);
+
 	printFish(&pf);
 
-	//if f is pressed, drop food
-       
+
 	if (pf.happiness)
 	    usleep(SLEEP_CYCLE/pf.happiness);
 	else
