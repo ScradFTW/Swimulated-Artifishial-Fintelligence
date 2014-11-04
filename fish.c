@@ -15,6 +15,13 @@
 
 char map[WIDTH][LENGTH];
 
+typedef struct food_props
+{
+    int x;
+    int y;
+    int exists;
+} food;
+
 typedef struct fish_props
 {
     int x;
@@ -164,20 +171,27 @@ void nextPosition(fish* pf)
 
 /* } */
 
-int dropFood(int fx, int fy, fish* pf)
+int dropFood(food fd[WIDTH], fish* pf, int fCount)
 {
+    for (int i = 0; i < fCount; i++)
+    {
+	if (fd[i].x == pf->x && fd[i].y == pf->y)
+	{
+	    mvaddch(pf->y, pf->x, '!');
+	    fd[i].exists = FALSE;
+	    fCount--;
+	}
 
-    mvaddch(fy-1, fx, ' ');
+	mvaddch(fd[i].y - 1, fd[i].x, ' ');
 
-    if (fx == pf->x && fy == pf->y)
-        return FALSE;
-    else
-        mvaddch(fy, fx, '*');
+	if (fd[i].exists)
+	{
+	    fd[i].y++;
+	    mvaddch(fd[i].y, fd[i].x, '*');
+	}
+    }
 
-    if (fy != LENGTH - 2)
-        return TRUE;
-
-    return FALSE;
+    return fCount;
 }
 
 void death(fish* pf)
@@ -198,9 +212,8 @@ int main()
     timeout(1);
 
     char ch;
-    int fx = 0;
-    int fy = 0;
-    int df = FALSE;
+    int fCount = 0;
+    food fd_ary[WIDTH];
     fish pf;
 
     pf.x = 10;
@@ -220,12 +233,15 @@ int main()
 
         //drop food when f is pressed
         ch = getch();
-        if (ch == 'f' && df == FALSE)
+        if (ch == 'f')
         {
+	    mvprintw(0, 0, "%d", fCount);
 	    srand(time(NULL));
-            fx = (rand() % WIDTH - 2) + 2;
-            fy = 0;
-            df = TRUE;
+	    fd_ary[fCount].exists = TRUE;
+	    fd_ary[fCount].x = (rand() % WIDTH - 2) + 2;
+	    fd_ary[fCount].y = 0;
+	    fCount++;
+	    
         }
         else if (ch == 'q')
         {
@@ -233,8 +249,8 @@ int main()
             return EXIT_SUCCESS;
         }
 
-        if (df)
-            df = dropFood(fx, fy++, &pf);
+        if (fCount > 0)
+            fCount = dropFood(fd_ary, &pf, fCount);
 
         printFish(&pf);
 
