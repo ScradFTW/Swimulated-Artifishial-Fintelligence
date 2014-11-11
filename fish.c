@@ -7,21 +7,32 @@
 #define SLEEP_CYCLE 3500000
 #define TRUE 1
 #define FALSE 0
+#define BOOL int
 
 #include <ncurses.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+#include <math.h>
 
 char map[WIDTH][LENGTH];
 
+/*
+ * Keeps track of the x and y position of a piece of food
+ * and whether it exists or not.
+ */ 
 typedef struct food_props
 {
     int x;
     int y;
-    int exists;
+    BOOL exists;
 } food;
 
+/*
+ * 
+ *
+ *
+ */ 
 typedef struct fish_props
 {
     int x;
@@ -134,7 +145,7 @@ void nextPosition(fish* pf)
     y += y_dir;
 
     if (x == WIDTH - 2 || y == LENGTH - 2
-            || x == 1 || y == 0)
+	|| x == 1 || y == 0)
     {
         x_dir *= -2;
         y_dir *= -2;
@@ -164,25 +175,65 @@ void nextPosition(fish* pf)
     pf->lifecycles++;
 }
 
-/* int findFood(int fx, int fy, fish* pf) */
-/* { */
-   
-    
+int distance(food* fd, fish* pf)
+{
+    int x_dist = abs(fd->x - pf->x);
+    int y_dist = abs(fd->y - pf->y);
 
-/* } */
+    return (int)sqrt(pow(x_dist, 2) + pow(y_dist, 2));
+}
+
+BOOL reachable(food* fd, fish* pf)
+{
+    if (fd->y > pf->y)
+	return FALSE;
+    else if (fd->y - pf->y >= pf->x - fd->x)
+	return TRUE;
+
+    return TRUE;
+}
+
+BOOL findFood(food fd[WIDTH], fish* pf, int fCount)
+{
+    int sd = 0;
+    int d; 
+    int closestFood = -1;
+
+    for (int i = 0; i < fCount; i++)
+	if (reachable(&fd[i], pf) 
+	    && (d = distance(&fd[i], pf)) < sd)
+	{
+	    sd = d;
+	    closestFood = i;
+	}
+
+    food* nearestFood = &fd[closestFood];
+
+    if (closestFood == -1)
+	return FALSE;
+
+    
+    if (pf->x > nearestFood->x && pf->x - nearestFood->x == sd)
+	pf->x--;
+    else if (nearestFood->x > pf->x && nearestFood->x - pf->x == sd)
+	pf->x++;
+    
+    return TRUE;
+}
 
 int dropFood(food fd[WIDTH], fish* pf, int fCount)
 {
     for (int i = 0; i < fCount; i++)
     {
-	if (fd[i].x == pf->x && fd[i].y == pf->y)
+	if ((fd[i].x == pf->x && fd[i].y == pf->y)
+	    || fd[i].y >= WIDTH - 2)
 	{
-	    mvaddch(pf->y, pf->x, '!');
+	    mvaddch(fd[i].y, fd[i].x, ' ');
 	    fd[i].exists = FALSE;
 	    fCount--;
 	}
 
-	mvaddch(fd[i].y - 1, fd[i].x, ' ');
+	mvaddch(fd[i].y, fd[i].x, ' ');
 
 	if (fd[i].exists)
 	{
@@ -226,6 +277,7 @@ int main()
     initMap();
     printMap(map);
 
+    
 
     for (;;)
     {
@@ -238,7 +290,7 @@ int main()
 	    mvprintw(0, 0, "%d", fCount);
 	    srand(time(NULL));
 	    fd_ary[fCount].exists = TRUE;
-	    fd_ary[fCount].x = (rand() % WIDTH - 2) + 2;
+	    fd_ary[fCount].x = (rand() % WIDTH - 2) + 3;
 	    fd_ary[fCount].y = 0;
 	    fCount++;
 	    
