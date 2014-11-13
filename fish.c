@@ -14,19 +14,9 @@
 #include <unistd.h>
 #include <time.h>
 #include <math.h>
+#include "food.h"
 
 char map[WIDTH][LENGTH];
-
-/*
- * Keeps track of the x and y position of a piece of food
- * and whether it exists or not.
- */ 
-typedef struct food_props
-{
-    int x;
-    int y;
-    BOOL exists;
-} food;
 
 /*
  * 
@@ -193,56 +183,24 @@ BOOL reachable(food* fd, fish* pf)
     return TRUE;
 }
 
-BOOL findFood(food fd[WIDTH], fish* pf, int fCount)
+BOOL findFood(food fd[WIDTH], fish* pf)
 {
-    int sd = 0;
-    int d; 
-    int closestFood = -1;
-
-    for (int i = 0; i < fCount; i++)
-	if (reachable(&fd[i], pf) 
-	    && (d = distance(&fd[i], pf)) < sd)
-	{
-	    sd = d;
-	    closestFood = i;
-	}
-
-    food* nearestFood = &fd[closestFood];
-
-    if (closestFood == -1)
-	return FALSE;
-
     
-    if (pf->x > nearestFood->x && pf->x - nearestFood->x == sd)
-	pf->x--;
-    else if (nearestFood->x > pf->x && nearestFood->x - pf->x == sd)
-	pf->x++;
-    
-    return TRUE;
 }
 
-int dropFood(food fd[WIDTH], fish* pf, int fCount)
+int dropFood(food* fStack, fish* pf)
 {
-    for (int i = 0; i < fCount; i++)
+    food* current = fStack;
+    if (current == NULL)
+	return FALSE;
+
+    while (current != NULL)
     {
-	if ((fd[i].x == pf->x && fd[i].y == pf->y)
-	    || fd[i].y >= WIDTH - 2)
-	{
-	    mvaddch(fd[i].y, fd[i].x, ' ');
-	    fd[i].exists = FALSE;
-	    fCount--;
-	}
-
-	mvaddch(fd[i].y, fd[i].x, ' ');
-
-	if (fd[i].exists)
-	{
-	    fd[i].y++;
-	    mvaddch(fd[i].y, fd[i].x, '*');
-	}
+	mvaddch(current->y++, current->x, '*');
+	current = current->next;
     }
 
-    return fCount;
+    return TRUE;
 }
 
 void death(fish* pf)
@@ -263,8 +221,7 @@ int main()
     timeout(1);
 
     char ch;
-    int fCount = 0;
-    food fd_ary[WIDTH];
+    food fStack;
     fish pf;
 
     pf.x = 10;
@@ -281,19 +238,17 @@ int main()
 
     for (;;)
     {
-        nextPosition(&pf);
+	if (fCount == 0)
+	    nextPosition(&pf);
+	else
+	    findFood(fd_ary, &pf, fCount);
 
         //drop food when f is pressed
         ch = getch();
         if (ch == 'f')
         {
-	    mvprintw(0, 0, "%d", fCount);
-	    srand(time(NULL));
-	    fd_ary[fCount].exists = TRUE;
-	    fd_ary[fCount].x = (rand() % WIDTH - 2) + 3;
-	    fd_ary[fCount].y = 0;
-	    fCount++;
-	    
+	    addFood(&fStack, (int)rand() % (WIDTH - 3) + 2);
+	    dropFood(&fStack, &pf);
         }
         else if (ch == 'q')
         {
