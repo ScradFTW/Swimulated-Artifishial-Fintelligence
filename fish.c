@@ -1,10 +1,12 @@
-#define WIDTH 30
-#define HEIGHT 30
+#define WIDTH 40
+#define HEIGHT 40
+#define MAX_FOOD_SIZE WIDTH * HEIGHT
 #define UP 0
 #define DOWN 1
 #define LEFT 2
 #define RIGHT 3
-#define SLEEP_CYCLE 280000
+#define MAX_HAPPINESS 10
+#define SLEEP_CYCLE 40000
 #define TRUE 1
 #define FALSE 0
 #define BOOL int
@@ -14,7 +16,6 @@
 #include <unistd.h>
 #include <time.h>
 #include <math.h>
-#include "food.h"
 
 char map[WIDTH][HEIGHT];
 
@@ -28,70 +29,40 @@ typedef struct food_list
 {
     int x;
     int y;
-    struct food_list* next;
-    struct food_list* prev;
 } food;
 
-BOOL addFood(food* fd, int x_pos)
+BOOL addFood(food* fList[MAX_FOOD_SIZE], int x_pos)
 {
-    food* newFd = (food*) malloc(sizeof(food));
-    food* current;
-
-    newFd->x = x_pos;
-    newFd->y = 0;
-    newFd->next = NULL;
-    newFd->prev = NULL;
-    
-
-    current = fd;
-    while (TRUE)
-    {
-	if (current->next == NULL)
+    for (int i = 0; i < MAX_FOOD_SIZE; i++)
+	if (fList[i] == NULL)
 	{
-	    current->next = newFd;
-	    newFd->prev = current;
-	    break;
-	}
-	else
-	    current = current->next;
-    }
-    
-
-    fd = current;
-
-    return TRUE;
-}
-
-BOOL deleteFood(food* fd)
-{
-    if (fd == NULL)
-	return FALSE;
- 
-    if (fd->prev != NULL && fd->next != NULL) //node inbetween two others       
-    {
-	fd->next->prev = fd->next;
-	fd->prev->next = fd->prev;
-    }
-    else if (fd->prev != NULL && fd->next == NULL) //last node
-	fd->prev->next = NULL;
-    else if (fd->prev == NULL && fd->next != NULL) //first node
-	fd->next->prev = NULL;
-
-
-    free(fd);
-    return TRUE;
-}
-
-BOOL foodAt(food* fd, int pfx, int pfy)
-{
-    food* current = fd;
-    while (current != NULL && pfx != 0 && pfy != 0)
-    {
-	if (current->x == pfx && current->y == pfy)
+	    fList[i] = malloc(sizeof(food));
+	    fList[i]->x = x_pos;
+	    fList[i]->y = 0;
 	    return TRUE;
-	
-	current = current->next;
-    }
+	}
+    
+    return FALSE;
+}
+
+BOOL deleteFood(food* fList[MAX_FOOD_SIZE], int i)
+{
+    if (fList[i] == NULL)
+	return FALSE;
+    else
+	fList[i] = NULL;
+
+    for (int n = i; fList[n + 1] != NULL; n++)
+	fList[n] = fList[n + 1];
+
+    return TRUE;
+}
+
+BOOL foodAt(food* fList[MAX_FOOD_SIZE], int fdx, int fdy)
+{
+    for (int i = 0; fList[i] != NULL; i++)
+	if (fList[i]->x == fdx && fList[i]->y == fdy)
+	    return TRUE;
 	
     return FALSE;
 }
@@ -105,7 +76,6 @@ typedef struct fish_props
     int direction;
     int pDirection;
     int happiness;
-    int hunger;
     unsigned long long lifecycles;
 } fish;
 
@@ -114,7 +84,7 @@ void initMap()
 {
     for (int x = 0; x < WIDTH; x++)
         for (int y = 0; y < HEIGHT; y++)
-            if (y == 0 || y == HEIGHT - 1 || x == WIDTH - 1)
+            if (x == 0 || x == WIDTH - 1 || y == HEIGHT - 1)
                 map[x][y] = '+';
             else
                 map[x][y] = ' ';
@@ -176,17 +146,14 @@ void printFish(fish* pf)
         break;
     }
 
-    move(1, 32);
-    printw("Life cycles:  %d", pf->lifecycles);
-
-    mvaddch(32, 0, ' ');
+    mvaddch(HEIGHT + 2, 0, ' ');
 }
 
 void printMap()
 {
-    for (int x = 0; x < WIDTH; x++)
+    for (int y = 0; y < HEIGHT; y++)
     {
-        for (int y = 0; y < HEIGHT; y++)
+        for (int x = 0; x < WIDTH; x++)
             printw("%c", map[x][y]);
 
         printw("\n");
@@ -195,8 +162,8 @@ void printMap()
 
 void nextPosition(fish* pf, int set_x_dir, int set_y_dir)
 {
-    int x = pf->x;
-    int y = pf->y;
+    int pfx = pf->x;
+    int pfy = pf->y;
     int x_dir = 0;
     int y_dir = 0;
     srand(time(NULL));
@@ -204,32 +171,32 @@ void nextPosition(fish* pf, int set_x_dir, int set_y_dir)
     if (set_x_dir == 0 && set_y_dir == 0)
     {
 	x_dir = (rand() % 3) - 1;
-	y_dir = (rand() % 3) - 1;
-
-	x += x_dir;
-	y += y_dir;	
+	y_dir = (rand() % 3) - 1;	
     }
     else
-    {
-	x += set_x_dir;
-	y += set_y_dir;
+    {       
+	x_dir = set_x_dir;
+	y_dir = set_y_dir;
     }
 
-    if (x == WIDTH - 2 || y == HEIGHT - 2
-	|| x == 1 || y == 0)
+    pfx += x_dir;
+    pfy += y_dir;
+
+    if (pfx == WIDTH - 1 || pfy == HEIGHT - 1
+	|| pfx == 1 || pfy == 0)
     {
         x_dir *= -2;
         y_dir *= -2;
-        x += x_dir;
-        y += y_dir;
+        pfx += x_dir;
+        pfy += y_dir;
     }
 
     pf->px = pf->x;
     pf->py = pf->y;
     pf->pDirection = pf->direction;
 
-    pf->x = x;
-    pf->y = y;
+    pf->x = pfx;
+    pf->y = pfy;
     if (x_dir == 1)
         pf->direction = RIGHT;
     else if (x_dir == -1)
@@ -245,38 +212,51 @@ void nextPosition(fish* pf, int set_x_dir, int set_y_dir)
 
 location* pathTo(fish* pf, int fdx, int fdy)
 {
+    int pfx = pf->x;
+    int pfy = pf->y;
     location* loc = malloc(sizeof(location));
     
-    if (pf->y == fdy)
+#ifdef DEBUGF
+    mvprintw(7, WIDTH + 5, "                                                  ");
+    mvprintw(8, WIDTH + 5, "                                                  ");
+    mvprintw(7, WIDTH + 5, "Food:   fdx = %d,   fdy = %d", fdx, fdy);
+    mvprintw(8, WIDTH + 5, "Fish: pf->x = %d, pf->y = %d", pfx, pfy); 
+    move(HEIGHT + 1, 0);
+#endif
+
+    if (pfy == fdy)
     {
-	if (pf->x > fdx)
+	if (pfx > fdx)
 	{
 	    loc->x = -1;
 	    loc->y = 1;
 	    return loc;
 	}
-	else if (pf->x < fdx)
+	else if (pfx < fdx)
 	{
 	    loc->x = 1;
 	    loc->y = 1;
 	    return loc;
 	}
+	else
+	    loc->x = 0;
+	loc->y = -1;
     }
-    else if (pf->y > fdy)
+    else if (pfy > fdy)
     {
-	if (pf->x == fdx)
+	if (pfx == fdx)
 	{
 	    loc->x = 0;
 	    loc->y = -1;
 	    return loc;
 	}
-	else if (pf->x > fdx)
+	else if (pfx > fdx)
 	{
 	    loc->x = -1;
 	    loc->y = -1;
 	    return loc;
 	}	
-	else if (pf->x < fdx)
+	else if (pfx < fdx)
 	{
 	    loc->x = 1;
 	    loc->y = -1;
@@ -287,118 +267,219 @@ location* pathTo(fish* pf, int fdx, int fdy)
     return NULL;
 }
 
-location* findFood(fish* pf, food* fd)
+location* findFood(fish* pf, food* fList[MAX_FOOD_SIZE])
 {
-    int searchWidth = HEIGHT - pf->y;
+    if (fList[0] == NULL)
+	return NULL;
 
-    for (int h = pf->y; h >= 0; h--)
+    int pfy = pf->y;
+    int pfx = pf->x;
+    int searchWidth = HEIGHT - 1 - pf->y;
+    location* loc;
+
+    for (int h = pfy; h >= 0; h--)
     {
-	for (int w = 0 - searchWidth; w < searchWidth; w++)
+	for (int w = pfx - searchWidth; w < pfx + searchWidth; w++)
 	{
-	    if (foodAt(fd, pf->x + w, h))
-	    {
-		location* loc;
-		return loc = pathTo(pf, pf->x + w, h);
-	    }
+	    if (w > 1 && w < WIDTH - 1
+		&& foodAt(fList, w, h))
+		return loc = pathTo(pf, w, h);
+
+#ifdef DEBUGF
+	    if (w > 1 && w < WIDTH - 1)
+		mvaddch(h, w, '#');
+#endif
 	}
 
 	searchWidth++;
     }
-
-
+		 
     return NULL;
 }
 
-int dropFood(food* fList, fish* pf)
+void dropFood(food* fList[MAX_FOOD_SIZE], fish* pf)
 {
-    food* current = fList;
-    if (current == NULL)
-	return FALSE;
+    int pfx = pf->x;
+    int pfy = pf->y;
+    int fdx, fdy;
 
-    while (current != NULL)
+    if (fList[0] == NULL)
+	return ;
+
+    for (int i = 0; fList[i] != NULL; i++)
     {
-	if (current->y != 0)
-	    mvaddch(current->y - 1, current->x, ' ');
-	
-	if (current->x > 0)
-	    mvaddch(current->y++, current->x, '*');
+	fList[i]->y++;
+	fdx = fList[i]->x;
+	fdy = fList[i]->y;
 
-	if (current->y >= HEIGHT - 1 
-	    || (pf->x == current->x && pf->y == current->y))
+	if (fdy > 1)
+	    mvaddch(fdy - 1, fdx, ' ');
+	
+
+	if (fdy > HEIGHT - 2)
 	{
-	    mvaddch(current->y - 1, current->x, ' ');
-	    deleteFood(current);
+	    deleteFood(fList, i);
+	    if (fList[0] == NULL)
+		break;
+	}
+	else if (fdx == pfx && (fdy == pfy || fdy + 1 == pfy))
+	{
+	    deleteFood(fList, i--);
+	    if (pf->happiness < MAX_HAPPINESS)
+		pf->happiness++;
+
+	    pf->lifecycles = 0;
+
+	    if (fList[0] == NULL)
+		break;
+	}
+	else if (fdy > 1)
+	    mvaddch(fdy, fdx, '*');
+	
+	move(HEIGHT + 1, 0);
+    }
+}
+
+int death(fish* pf)
+{
+    
+    while (TRUE)
+    {
+	
+	if (pf->y < WIDTH - 2)
+	    nextPosition(pf, 0, 1);
+	else
+	{
+	    mvprintw(32, 0, "You have forgotten to feed your fish "
+		     "and it has passed away.");
+
+	    break;
 	}
 
-	current = current->next;
+	printFish(pf);
+	refresh();
+	usleep(SLEEP_CYCLE);
+    }
+    return EXIT_SUCCESS;
+}
+
+void printFishStats(fish* pf)
+{
+    char* face = malloc(5 * sizeof(char));
+    int happiness = pf->happiness;
+
+    mvprintw(3, WIDTH + 2, "Happiness: [");
+    for (int h = 0; h < MAX_HAPPINESS; h++)
+    {
+	if (h < happiness - 1)
+	    mvprintw(3, WIDTH + 14 + h, "|");
+	else
+	    mvprintw(3, WIDTH + 14 + h, " ");
     }
 
-	
+    mvprintw(3, WIDTH + 23, "]");
+    
+    switch (happiness)
+    {
+    case 0:
+	face = "X(";
+	break;
 
-    return TRUE;
+    case 1:
+    case 2:
+	face = ":'(";
+	break;
+
+    case 3:
+    case 4:
+	face = ":(";
+	break;
+
+    case 5:
+    case 6:
+	face = ":|";
+	break;
+
+    case 7:
+    case 8:
+	face = ":)";
+	break;
+
+    case 9:
+	face = ":D";
+	break;
+
+    case 10:
+	face = "!:D";
+    }
+
+    mvprintw(3, WIDTH + 24, "%4s", face);
+    
+    move(HEIGHT + 2, 0);
 }
-
-void death(fish* pf)
-{
-    pf->direction = DOWN;
-
-    while (map[pf->x][pf->y--] == ' ')
-        printFish(pf);
-
-}
-
 
 int main()
 {
     initscr();
     raw();
     cbreak();
-    timeout(1);
+    timeout(100);
 
     char ch;
-    food* fList = malloc(sizeof(food));
+    food* fList[MAX_FOOD_SIZE] = {0};
+
     fish pf;
     int randX;
     location* loc;
 
-    pf.x = 10;
-    pf.y = 10;
-    pf.happiness = 8;
+    pf.x = WIDTH - 10;
+    pf.y = HEIGHT - 10;
+    pf.happiness = 7;
     pf.direction = UP;
     pf.lifecycles = 0;
-    pf.hunger = 0;
 
     initMap();
     printMap(map);
 
     for (;;)
     {
+	if (pf.happiness <= 0)
+	    return death(&pf);
+
+	ch = getch();
+	if (ch == 'f')
+	{
+	    randX = (rand() % (WIDTH - 4)) + 3;
+	    addFood(fList, randX);
+	}
+	else if (ch == 'q')
+	{
+	    nocbreak();
+	    return EXIT_SUCCESS;
+	}
+
+	printFishStats(&pf);
+
 	if ((loc = findFood(&pf, fList)) != NULL)
 	    nextPosition(&pf, loc->x, loc->y);
 	else
 	    nextPosition(&pf, 0 , 0);
 
-	ch = getch();
-        if (ch == 'f')
-        {
-	    randX = (rand() % (WIDTH - 4)) + 3;
-	    addFood(fList, randX);
-        }
-        else if (ch == 'q')
-        {
-            nocbreak();
-            return EXIT_SUCCESS;
-        }
+	if (pf.lifecycles == 100)
+	{
+	    pf.lifecycles = 0;
+	    pf.happiness--;
+	}
 
 	dropFood(fList, &pf);
+
 	printFish(&pf);
 	
 	usleep(SLEEP_CYCLE);
-        refresh();
-
+	refresh();
     }
 
-    getch();
+    nocbreak();
     endwin();
     return EXIT_SUCCESS;
 }
